@@ -1,0 +1,10 @@
+TimeFliq/Debug
+TimeFliq/Release
+
+*.exe
+*.suo
+*.filters
+*.user
+*.sdf
+*.opensdf
+*.aps
