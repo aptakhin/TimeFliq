@@ -70,55 +70,7 @@ void Monitor::Impl::set_message(const wchar_t* msg) {
 	msg_ = msg;
 }
 
-static UINT_PTR gtimer = NULL;
 static HFONT font = NULL;
-
-void CALLBACK time2unlock(HWND, UINT msg, UINT_PTR event_id, DWORD time);
-
-void CALLBACK time2lock(HWND, UINT msg, UINT_PTR event_id, DWORD time) {
-	SetTimer(NULL, gtimer, 10000, time2unlock);
-	ctrl.lock();
-}
-
-void CALLBACK time2unlock(HWND, UINT msg, UINT_PTR event_id, DWORD time) {
-	ctrl.unlock();
-	SetTimer(NULL, gtimer, 45 * 60000, time2lock);
-}
-
-class FiberW {
-public:
-	FiberW(HWND hwnd, void (*func)(void*, FiberW*), void* arg);
-
-	~FiberW();
-
-	void resume();
-
-	void wait_ms(unsigned msec);
-
-	void can_pause();
-
-	void pause_softly();
-
-private:
-	static void __stdcall call_func(void* arg) {
-		auto fiber = (FiberW*) arg;
-		fiber->func_(fiber->func_arg_, fiber);
-	}
-
-	static void CALLBACK on_timer(HWND, UINT msg, UINT_PTR event_id, DWORD time) {
-		auto fiber = (FiberW*) event_id;
-		fiber->resume();
-	}
-
-private:
-	bool to_pause_;
-	void* fiber_;
-	void* back_fiber_;
-	void (*func_)(void*, FiberW*);
-	void* func_arg_;
-	HWND hwnd_;
-	UINT_PTR timer_;
-};
 
 FiberW::FiberW(HWND hwnd, void (*func)(void*, FiberW*), void* arg)
 :	to_pause_(false),
@@ -302,7 +254,7 @@ void usual_mode_fiber(void* data, FiberW* fiber) {
 
 void Ctrl::Impl::init() {
 	WNDCLASSEX wcex;
-    wcex.cbSize        = sizeof(WNDCLASSEX);
+    wcex.cbSize        = sizeof WNDCLASSEX;
     wcex.style         = CS_HREDRAW | CS_VREDRAW;
     wcex.lpfnWndProc   = wnd_proc;
     wcex.cbClsExtra    = 0;
@@ -365,8 +317,6 @@ void Ctrl::Impl::init() {
 	res = InsertMenuItem(popup_menu, 2, TRUE, &menu_item);
 
 	ctrl.monitors[0].impl()->popup_menu_ = popup_menu;
-
-	gtimer = SetTimer(NULL, NULL, 100, time2unlock);
 
 	ConvertThreadToFiber(GetCurrentThread());
 

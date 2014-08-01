@@ -42,15 +42,37 @@ public:
 	NOTIFYICONDATA notify_;
 };
 
-class Fiber::Impl {
+class FiberW {
 public:
-	Impl(void (*func)(void));
+	FiberW(HWND hwnd, void (*func)(void*, FiberW*), void* arg);
 
-	static void on(Fiber& fiber);
-	static void pause();
+	~FiberW();
+
+	void resume();
+
+	void wait_ms(unsigned msec);
+
+	void can_pause();
+
+	void pause_softly();
 
 private:
-	LPVOID fiber_;
+	static void __stdcall call_func(void* arg) {
+		auto fiber = (FiberW*) arg;
+		fiber->func_(fiber->func_arg_, fiber);
+	}
 
-	void (*func_)(void);
+	static void CALLBACK on_timer(HWND, UINT msg, UINT_PTR event_id, DWORD time) {
+		auto fiber = (FiberW*) event_id;
+		fiber->resume();
+	}
+
+private:
+	bool to_pause_;
+	void* fiber_;
+	void* back_fiber_;
+	void (*func_)(void*, FiberW*);
+	void* func_arg_;
+	HWND hwnd_;
+	UINT_PTR timer_;
 };

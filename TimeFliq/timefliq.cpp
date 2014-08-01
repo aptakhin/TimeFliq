@@ -68,7 +68,6 @@ void Ctrl::lock() {
 
 void Ctrl::unlock() {
 	impl_->set_input_lock(false);
-
 	for (size_t i = 0; i < monitors_num; ++i) {
 		monitors[i].unlock();
 	}

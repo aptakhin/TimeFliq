@@ -63,30 +63,3 @@ private:
 namespace {
 	Ctrl ctrl;
 }
-
-class Fiber {
-public:
-	Fiber(void (*func)(void));
-
-	static void on(Fiber& fiber);
-	static void pause();
-
-	class Impl;
-	Impl* impl() { return impl_; }
-
-private:
-	Impl* impl_ = nullptr;
-
-protected:
-	void on();
-
-	void call_func();
-
-	//static void __stdcall FiberProc(LPVOID);
-
-protected:
-	//LPVOID fiber_;
-
-	void (*func_)(void);
-};
-
