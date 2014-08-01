@@ -7,7 +7,7 @@
 #ifdef _WIN32
 int WinMainCRTStartup() {
 #else
-#	error "Need something implemented!"
+#	error "Need main implemented!"
 #endif
 	ctrl.init();
 	int result = ctrl.run();

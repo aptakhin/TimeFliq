@@ -60,7 +60,9 @@ private:
 	Impl* impl_ = nullptr;
 };
 
-static Ctrl ctrl;
+namespace {
+	Ctrl ctrl;
+}
 
 class Fiber {
 public:

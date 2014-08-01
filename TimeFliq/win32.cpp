@@ -1,5 +1,6 @@
 
 #include "win32.h"
+#include <commctrl.h>
 #include "resource.h"
 
 void* __cdecl operator new(unsigned int bytes) {
@@ -35,7 +36,6 @@ void wcopy(wchar_t* dst, const wchar_t* src, size_t size) {
 wchar_t* wcopy(const wchar_t* copy) {
 	size_t size = wlen(copy);
 	wchar_t* cpy = new wchar_t[size + 1];
-	RtlSecureZeroMemory(cpy, (size + 1) * sizeof (wchar_t));
 	wcopy(cpy, copy, size);
 	cpy[size] = L'\0';
 	return cpy;
@@ -157,7 +157,9 @@ void FiberW::pause_softly() {
 struct Menu {
 	enum {
 		USUAL,
-		CRANCH
+		CRANCH,
+		ADD_5MIN,
+		ABOUT,
 	};
 };
 
@@ -171,13 +173,14 @@ LRESULT CALLBACK wnd_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     switch (message) {
     case WM_PAINT: {
         hdc = BeginPaint(hWnd, &ps);
+		// Draw black rect
 		SelectObject(hdc, GetStockObject(BLACK_BRUSH));
-		
 		RECT rect;
 		SetRect(&rect, monitor.rect().x, monitor.rect().y, 
 			monitor.rect().x + monitor.rect().w, monitor.rect().y + monitor.rect().h);
 		Rectangle(hdc, rect.left, rect.top, rect.right, rect.bottom);
 		
+		// Draw text
         SelectObject(hdc, font);
 		SetTextAlign(hdc, TA_CENTER);
 		SetTextColor(hdc, RGB(150, 150, 150));
@@ -196,7 +199,7 @@ LRESULT CALLBACK wnd_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		PostQuitMessage(0);
         break;
 
-	case WM_USER + 1: {
+	case TF_WM_SHELL_ICON: {
 		switch (lParam) {
         case WM_RBUTTONDOWN:
         case WM_CONTEXTMENU: {
@@ -225,8 +228,11 @@ LRESULT CALLBACK wnd_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			CheckMenuItem(monitor.impl()->popup_menu_, Menu::USUAL,  MF_UNCHECKED);
 			CheckMenuItem(monitor.impl()->popup_menu_, Menu::CRANCH, MF_CHECKED);
 			break;
+
+		case Menu::ADD_5MIN:
+			CheckMenuItem(monitor.impl()->popup_menu_, Menu::ADD_5MIN, MF_DISABLED);
+			break;
 		}
-		int l = 0;
 	}
 		break;
 
@@ -324,12 +330,13 @@ void Ctrl::Impl::init() {
 	// Notify icon
 	RtlSecureZeroMemory(&notify_, sizeof notify_);
 	notify_.cbSize = sizeof notify_;
-	notify_.hIcon  = LoadIcon(NULL, MAKEINTRESOURCE(IDI_ICON1)); 
+
+	notify_.hIcon  = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_ICON1)); 
 	notify_.hWnd   = ctrl.monitors[0].impl()->wnd_; 
-	notify_.uID    = WM_USER + 2; 
+	notify_.uID    = WM_USER; 
 	notify_.uFlags = NIF_ICON | NIF_MESSAGE;
 
-	notify_.uCallbackMessage = WM_USER + 1; 
+	notify_.uCallbackMessage = TF_WM_SHELL_ICON;
 	auto res = Shell_NotifyIcon(NIM_ADD, &notify_); 
 
 	// Menu
@@ -346,8 +353,17 @@ void Ctrl::Impl::init() {
                 
 	menu_item.wID    = Menu::CRANCH;
 	menu_item.fState = MF_UNCHECKED;
+	menu_item.fMask  = MIIM_TYPE | MIIM_ID | MIIM_STATE;
 	menu_item.dwTypeData = L"&Cranch";
 	res = InsertMenuItem(popup_menu, 1, TRUE, &menu_item);
+
+	menu_item.wID    = Menu::ADD_5MIN;
+	menu_item.fType  = MFT_STRING;
+	menu_item.fState = MF_ENABLED;
+	menu_item.fMask  = MIIM_TYPE | MIIM_ID | MIIM_STATE;
+	menu_item.dwTypeData = L"&Add 5 min";
+	res = InsertMenuItem(popup_menu, 2, TRUE, &menu_item);
+
 	ctrl.monitors[0].impl()->popup_menu_ = popup_menu;
 
 	gtimer = SetTimer(NULL, NULL, 100, time2unlock);

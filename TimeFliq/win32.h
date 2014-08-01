@@ -8,6 +8,8 @@
 void* __cdecl operator new(unsigned bytes);
 void __cdecl operator delete(void* ptr);
 
+const auto TF_WM_SHELL_ICON = WM_USER + 1;
+
 class Monitor::Impl {
 public:
 	Rect rect_;
@@ -52,4 +54,3 @@ private:
 
 	void (*func_)(void);
 };
-
