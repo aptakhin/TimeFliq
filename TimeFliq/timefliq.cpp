@@ -2,8 +2,6 @@
 #include "timefliq.h"
 #ifdef _WIN32
 #	include "win32.h"
-#else
-#	error "Need something implemented!"
 #endif
 
 void Monitor::init(const Rect& rect) { 
@@ -53,6 +51,23 @@ int Ctrl::run() {
 
 void Ctrl::set_mode(Mode mode) {
 	
+}
+
+void Ctrl::rest_timer_sub(unsigned int sub) {
+	set_rest_timer(rest_timer_ - sub);
+}
+
+void Ctrl::rest_timer_add(unsigned int add) {
+	set_rest_timer(rest_timer_ + add);
+}
+
+void Ctrl::set_rest_timer(unsigned int set) {
+	rest_timer_ = set;
+
+	wchar_t buf[256] = L"";
+	wsprintf(buf, L"%d minutes left", (rest_timer_ + 59999) / 60000);
+	wcscpy_s(impl_->notify_.szTip, buf);
+	auto res = Shell_NotifyIcon(NIM_MODIFY, &impl_->notify_);
 }
 
 void Ctrl::lock() {

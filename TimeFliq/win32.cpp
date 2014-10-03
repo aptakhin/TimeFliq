@@ -57,7 +57,7 @@ FiberW::FiberW(HWND hwnd, void (*func)(void*, FiberW*), void* arg)
 }
 
 FiberW::~FiberW() {
-
+	
 }
 
 void FiberW::resume() {
@@ -156,21 +156,13 @@ LRESULT CALLBACK wnd_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
 			EnableMenuItem(monitor.impl()->popup_menu_, Menu::ADD_5MIN, MF_GRAYED);
 			break;
 
-		case Menu::ADD_5MIN:
+		case Menu::ADD_5MIN: {
 			EnableMenuItem(monitor.impl()->popup_menu_, Menu::ADD_5MIN, MF_GRAYED);
-			gCtrl.time2rest_ += 5 * 60000;
+			gCtrl.rest_timer_add(5 * MINUTE_MS);
+			
 			break;
 		}
-	}
-		break;
-
-	case WM_SYSCOMMAND: {
-		int l = 0;
-	}
-		break;
-
-	case WM_CONTEXTMENU: {
-		int l = 0;
+		}
 	}
 		break;
 
@@ -205,7 +197,7 @@ void usual_mode_fiber(void* data, FiberW* fiber) {
 	const wchar_t rest[] = L"Rest";
 	wchar_t buf[256] = L"";
 
-	unsigned int work_ms = 48 * MINUTE_MS;
+	unsigned int work_ms = 50 * MINUTE_MS;
 	unsigned int rest_ms = 10 * MINUTE_MS;
 	unsigned int notf_ms = 1500;
 	unsigned int upd_ms  = MINUTE_MS;
@@ -226,19 +218,15 @@ void usual_mode_fiber(void* data, FiberW* fiber) {
 		if (!ctrl.monitors_num)
 			continue;
 
-		ctrl.time2rest_ = work_ms;
+		ctrl.set_rest_timer(work_ms);
 
-		while (ctrl.time2rest_) {
-			wsprintf(buf, L"%d minutes left", (ctrl.time2rest_ + 59999) / 60000);
-			wcscpy_s(ctrl.impl()->notify_.szTip, buf);
-			auto res = Shell_NotifyIcon(NIM_MODIFY, &ctrl.impl()->notify_);
-
+		while (ctrl.rest_timer()) {
 			if (state == MIN2) {
 				state = WORK;
 				ctrl.monitors[0].set_message(min2);
 				ctrl.monitors[0].lock();
 				fiber->wait_ms(notf_ms);
-				ctrl.time2rest_ -= notf_ms;
+				gCtrl.rest_timer_sub(notf_ms);
 				ctrl.monitors[0].unlock();
 			}
 			else if (state == MIN1) {
@@ -246,26 +234,26 @@ void usual_mode_fiber(void* data, FiberW* fiber) {
 				ctrl.monitors[0].set_message(min1);
 				ctrl.monitors[0].lock();
 				fiber->wait_ms(notf_ms);
-				ctrl.time2rest_ -= notf_ms;
+				gCtrl.rest_timer_sub(notf_ms);
 				ctrl.monitors[0].unlock();
 			}
 			else {
 				state = WORK;
 				auto wait = 0;
-				if (2 * upd_ms <= ctrl.time2rest_ && ctrl.time2rest_ < 3 * upd_ms)
+				if (2 * upd_ms <= ctrl.rest_timer() && ctrl.rest_timer() < 3 * upd_ms)
 				{
 					state = MIN2;
-					wait = ctrl.time2rest_ - 2 * upd_ms;
+					wait = ctrl.rest_timer() - 2 * upd_ms;
 				}
-				else if (upd_ms <= ctrl.time2rest_ && ctrl.time2rest_ < 2 * upd_ms)
+				else if (upd_ms <= ctrl.rest_timer() && ctrl.rest_timer() < 2 * upd_ms)
 				{
 					state = MIN1;
-					wait = ctrl.time2rest_ - upd_ms;
+					wait = ctrl.rest_timer() - upd_ms;
 				}
 				else {
-					wait = std::min(ctrl.time2rest_, upd_ms);
+					wait = std::min(ctrl.rest_timer(), upd_ms);
 				}
-				ctrl.time2rest_ -= wait;
+				gCtrl.rest_timer_sub(wait);
 				fiber->wait_ms(wait);
 			}
 		}
@@ -296,9 +284,7 @@ void Ctrl::Impl::init() {
 	wcex.lpszClassName = app_title;
 	wcex.hIconSm       = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_APPLICATION));
 
-	if (!RegisterClassEx(&wcex)) {
-		//MessageBox(NULL, L"Call to RegisterClassEx failed!", app_title, NULL);
-	}
+	if (!RegisterClassEx(&wcex)) { /* error */ }
 
 	font = CreateFont(48, 0, 0, 0, FW_DONTCARE, FALSE, FALSE, FALSE, 
 		DEFAULT_CHARSET, OUT_OUTLINE_PRECIS,
@@ -371,8 +357,4 @@ int Ctrl::Impl::run() {
 void Ctrl::Impl::set_input_lock(bool lock) {
 	BlockInput(lock? TRUE : FALSE);
 	auto err = GetLastError();
-	if (err) {
-		//if (err == ERROR_ACCESS_DENIED) 
-		//	MessageBox(NULL, L"Access denied", L"Access", 0);
-	}
 }

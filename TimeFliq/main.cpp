@@ -7,7 +7,7 @@
 #ifdef _WIN32
 int CALLBACK WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd, int show) {
 #else
-#	error "Need main implemented!"
+#	error "Win32 only!"
 #endif
 	gCtrl.init();
 	int result = gCtrl.run();

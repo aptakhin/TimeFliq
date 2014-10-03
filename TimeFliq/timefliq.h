@@ -44,8 +44,6 @@ public:
 	Monitor monitors[4];
 	size_t monitors_num = 0;
 
-	unsigned int time2rest_;
-
 	void init();
 	void destroy();
 
@@ -60,8 +58,15 @@ public:
 
 	Impl* impl() { return impl_; }
 
+	unsigned int rest_timer() const { return rest_timer_; }
+	void rest_timer_sub(unsigned int sub);
+	void rest_timer_add(unsigned int add);
+	void set_rest_timer(unsigned int set);
+
 private:
 	Impl* impl_ = nullptr;
+
+	unsigned int rest_timer_;
 };
 
 extern Ctrl gCtrl;
