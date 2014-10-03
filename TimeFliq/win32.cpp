@@ -202,10 +202,6 @@ void usual_mode_fiber(void* data, FiberW* fiber) {
 	unsigned int notf_ms = 1500;
 	unsigned int upd_ms  = MINUTE_MS;
 
-	//work_ms = 10 * 1000;
-	//rest_ms = 1 * 1000;
-	//upd_ms = 2000;
-
 	enum State {
 		MIN2,
 		MIN1,
