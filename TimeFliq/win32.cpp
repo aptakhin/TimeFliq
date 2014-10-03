@@ -91,14 +91,14 @@ struct Menu {
 };
 
 LRESULT CALLBACK wnd_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
-    PAINTSTRUCT ps;
-    HDC hdc;
+	PAINTSTRUCT ps;
+	HDC hdc;
 	wchar_t rest[] = L"Rest";
 	Monitor& monitor = *((Monitor*) GetWindowLong(hwnd, GWL_USERDATA));
 
-    switch (message) {
-    case WM_PAINT: {
-        hdc = BeginPaint(hwnd, &ps);
+	switch (message) {
+	case WM_PAINT: {
+		hdc = BeginPaint(hwnd, &ps);
 		// Draw black rect
 		SelectObject(hdc, GetStockObject(BLACK_BRUSH));
 		RECT rect;
@@ -107,34 +107,34 @@ LRESULT CALLBACK wnd_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
 		Rectangle(hdc, rect.left, rect.top, rect.right, rect.bottom);
 		
 		// Draw text
-        SelectObject(hdc, font);
+		SelectObject(hdc, font);
 		SetTextAlign(hdc, TA_CENTER);
 		SetTextColor(hdc, RGB(150, 150, 150));
 		SetBkColor(hdc, RGB(0, 0, 0));
 		DrawText(hdc, monitor.impl()->msg_? monitor.impl()->msg_ : rest, -1, &rect, DT_CENTER | DT_SINGLELINE | DT_VCENTER);
 
-        EndPaint(hwnd, &ps);
+		EndPaint(hwnd, &ps);
 	}
-        break;
+		break;
 
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        break;
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		break;
 
 	case WM_KEYDOWN:
 		PostQuitMessage(0);
-        break;
+		break;
 
 	case TF_WM_SHELL_ICON: {
 		switch (lparam) {
-        case WM_RBUTTONDOWN:
-        case WM_CONTEXTMENU: {
+		case WM_RBUTTONDOWN:
+		case WM_CONTEXTMENU: {
 			POINT mouse_pos;
 			auto res = GetCursorPos(&mouse_pos);
 			HMENU popup_menu = monitor.impl()->popup_menu_;
-            TrackPopupMenu(popup_menu, TPM_BOTTOMALIGN | TPM_LEFTALIGN, mouse_pos.x, mouse_pos.y, 0, hwnd, NULL);
+			TrackPopupMenu(popup_menu, TPM_BOTTOMALIGN | TPM_LEFTALIGN, mouse_pos.x, mouse_pos.y, 0, hwnd, NULL);
 		}
-        }
+		}
 	}
 		break;
 
@@ -174,11 +174,11 @@ LRESULT CALLBACK wnd_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
 	}
 		break;
 
-    default:
-        return DefWindowProc(hwnd, message, wparam, lparam);
-    }
+	default:
+		return DefWindowProc(hwnd, message, wparam, lparam);
+	}
 
-    return 0;
+	return 0;
 }
 
 BOOL CALLBACK monitors_proc(HMONITOR hmonitor, HDC hdc_monitor, LPRECT rc_monitor, LPARAM data) {
@@ -283,22 +283,22 @@ void usual_mode_fiber(void* data, FiberW* fiber) {
 
 void Ctrl::Impl::init() {
 	WNDCLASSEX wcex;
-    wcex.cbSize        = sizeof WNDCLASSEX;
-    wcex.style         = CS_HREDRAW | CS_VREDRAW;
-    wcex.lpfnWndProc   = wnd_proc;
-    wcex.cbClsExtra    = 0;
-    wcex.cbWndExtra    = 0;
-    wcex.hInstance     = NULL;
-    wcex.hIcon         = LoadIcon(NULL, MAKEINTRESOURCE(IDI_APPLICATION));
-    wcex.hCursor       = LoadCursor(NULL, IDC_ARROW);
-    wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-    wcex.lpszMenuName  = NULL;
-    wcex.lpszClassName = app_title;
-    wcex.hIconSm       = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_APPLICATION));
+	wcex.cbSize        = sizeof WNDCLASSEX;
+	wcex.style         = CS_HREDRAW | CS_VREDRAW;
+	wcex.lpfnWndProc   = wnd_proc;
+	wcex.cbClsExtra    = 0;
+	wcex.cbWndExtra    = 0;
+	wcex.hInstance     = NULL;
+	wcex.hIcon         = LoadIcon(NULL, MAKEINTRESOURCE(IDI_APPLICATION));
+	wcex.hCursor       = LoadCursor(NULL, IDC_ARROW);
+	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	wcex.lpszMenuName  = NULL;
+	wcex.lpszClassName = app_title;
+	wcex.hIconSm       = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_APPLICATION));
 
-    if (!RegisterClassEx(&wcex)) {
-        //MessageBox(NULL, L"Call to RegisterClassEx failed!", app_title, NULL);
-    }
+	if (!RegisterClassEx(&wcex)) {
+		//MessageBox(NULL, L"Call to RegisterClassEx failed!", app_title, NULL);
+	}
 
 	font = CreateFont(48, 0, 0, 0, FW_DONTCARE, FALSE, FALSE, FALSE, 
 		DEFAULT_CHARSET, OUT_OUTLINE_PRECIS,
@@ -333,7 +333,7 @@ void Ctrl::Impl::init() {
 	menu_item.wID    = Menu::USUAL;
 	menu_item.dwTypeData = L"&Usual";
 	res = InsertMenuItem(popup_menu, 0, TRUE, &menu_item);
-                
+
 	menu_item.wID    = Menu::CRANCH;
 	menu_item.fState = MF_UNCHECKED;
 	menu_item.fMask  = MIIM_TYPE | MIIM_ID | MIIM_STATE;
@@ -361,10 +361,10 @@ void Ctrl::Impl::destroy() {
 int Ctrl::Impl::run() {
 	fiber_->resume();
 	MSG msg;
-    while (GetMessage(&msg, NULL, 0, 0)) {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }
+	while (GetMessage(&msg, NULL, 0, 0)) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
 	return 0;
 }
 
