@@ -5,12 +5,12 @@
 #endif
 
 #ifdef _WIN32
-int WinMainCRTStartup() {
+int CALLBACK WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd, int show) {
 #else
 #	error "Need main implemented!"
 #endif
-	ctrl.init();
-	int result = ctrl.run();
-	ctrl.destroy();
+	gCtrl.init();
+	int result = gCtrl.run();
+	gCtrl.destroy();
 	return result;
 }

@@ -1,8 +1,10 @@
 /* TimeFliq */
 #pragma once
 
-#include "win32common.h"
+#include <atomic>
 static wchar_t app_title[] = L"TimeFliq";
+
+const static unsigned int MINUTE_MS = 60000;
 
 template <class T, size_t N>
 size_t length(T (&arr)[N]) {
@@ -23,7 +25,7 @@ public:
 	void set_message(const wchar_t* msg);
 
 	const Rect& rect() const;
-	void set_rect(const Rect& rect);
+	//void set_rect(const Rect& rect);
 
 	class Impl;
 	Impl* impl() { return impl_; }
@@ -41,6 +43,8 @@ class Ctrl {
 public:
 	Monitor monitors[4];
 	size_t monitors_num = 0;
+
+	unsigned int time2rest_;
 
 	void init();
 	void destroy();
@@ -60,6 +64,5 @@ private:
 	Impl* impl_ = nullptr;
 };
 
-namespace {
-	Ctrl ctrl;
-}
+extern Ctrl gCtrl;
+

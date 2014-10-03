@@ -1,2 +1,0 @@
-/* TimeFliq */
-#pragma once

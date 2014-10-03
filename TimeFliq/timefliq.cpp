@@ -36,10 +36,6 @@ const Rect& Monitor::rect() const {
 	return impl_->rect();
 }
 
-void Monitor::set_rect(const Rect& rect) {
-	return impl_->set_rect(rect);
-}
-
 void Ctrl::init() {
 	impl_ = new Impl;
 	impl_->init();

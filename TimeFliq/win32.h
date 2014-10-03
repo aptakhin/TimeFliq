@@ -1,12 +1,10 @@
 /* TimeFliq */
 #pragma once
 
-#include "win32common.h"
+#define NOMINMAX
 #include <windows.h>
+#include <memory>
 #include "timefliq.h"
-
-void* __cdecl operator new(unsigned bytes);
-void __cdecl operator delete(void* ptr);
 
 const auto TF_WM_SHELL_ICON = WM_USER + 1;
 
@@ -30,6 +28,8 @@ public:
 	const Rect& rect() const { return rect_; }
 };
 
+class FiberW;
+
 class Ctrl::Impl {
 public:
 	void init();
@@ -40,6 +40,8 @@ public:
 	void set_input_lock(bool lock);
 
 	NOTIFYICONDATA notify_;
+
+	std::unique_ptr<FiberW> fiber_;
 };
 
 class FiberW {

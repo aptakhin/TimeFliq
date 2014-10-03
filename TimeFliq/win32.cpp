@@ -1,55 +1,30 @@
 
 #include "win32.h"
 #include <commctrl.h>
+#include <algorithm>
 #include "resource.h"
 
-void* __cdecl operator new(unsigned int bytes) {
-	return HeapAlloc(GetProcessHeap(), 0, bytes);
-	// We have a few allocations. Have to use stack
-}
-
-void __cdecl operator delete(void* ptr) {
-	if (ptr)
-		HeapFree(GetProcessHeap(), 0, ptr);
-}
-
-size_t wlen(const wchar_t* str) {
-	size_t size = 0;
-	while (*(str++) != L'\0') 
-		size += 1;
-	return size;
-}
-
-void ccopy(void* dst, const void* src, size_t size) {
-	char* d = (char*) dst, *s = (char*) src;
-	while (size--) {
-		*d = *s;
-	}
-}
-
-void wcopy(wchar_t* dst, const wchar_t* src, size_t size) {
-	for (size_t i = 0; i < size; ++i) {
-		dst[i] = src[i];
-	}
-}
-
-wchar_t* wcopy(const wchar_t* copy) {
-	size_t size = wlen(copy);
-	wchar_t* cpy = new wchar_t[size + 1];
-	wcopy(cpy, copy, size);
-	cpy[size] = L'\0';
-	return cpy;
-}
+Ctrl gCtrl;
 
 void Monitor::Impl::init(Monitor* monitor, const Rect& rect) {
 	rect_ = rect;
-	wnd_ = CreateWindow(app_title, app_title, WS_POPUP | WS_EX_TOPMOST,
+	wnd_ = CreateWindow(app_title, app_title, WS_POPUP | WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
 		rect_.x, rect_.y, rect_.w, rect_.h, NULL, NULL, NULL, NULL);
+
+	long style = GetWindowLong(wnd_, GWL_STYLE);
+
+	style &= ~WS_VISIBLE;
+	style |= WS_EX_TOOLWINDOW;
+	style &= ~WS_EX_APPWINDOW; 
+
+	SetWindowLong(wnd_, GWL_STYLE, style);
 
 	SetWindowLongPtr(wnd_, GWL_USERDATA, (LONG_PTR) monitor);
 }
 
-void Monitor::Impl::destroy() {}
+void Monitor::Impl::destroy() {
+
+}
 
 void Monitor::Impl::set_visible(bool show) {
 	ShowWindow(wnd_, show? SW_SHOW : SW_HIDE);
@@ -115,16 +90,15 @@ struct Menu {
 	};
 };
 
-LRESULT CALLBACK wnd_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
+LRESULT CALLBACK wnd_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
     PAINTSTRUCT ps;
     HDC hdc;
 	wchar_t rest[] = L"Rest";
-	Monitor& monitor = *((Monitor*) GetWindowLong(hWnd, GWL_USERDATA));
+	Monitor& monitor = *((Monitor*) GetWindowLong(hwnd, GWL_USERDATA));
 
     switch (message) {
     case WM_PAINT: {
-        hdc = BeginPaint(hWnd, &ps);
+        hdc = BeginPaint(hwnd, &ps);
 		// Draw black rect
 		SelectObject(hdc, GetStockObject(BLACK_BRUSH));
 		RECT rect;
@@ -139,7 +113,7 @@ LRESULT CALLBACK wnd_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		SetBkColor(hdc, RGB(0, 0, 0));
 		DrawText(hdc, monitor.impl()->msg_? monitor.impl()->msg_ : rest, -1, &rect, DT_CENTER | DT_SINGLELINE | DT_VCENTER);
 
-        EndPaint(hWnd, &ps);
+        EndPaint(hwnd, &ps);
 	}
         break;
 
@@ -152,37 +126,39 @@ LRESULT CALLBACK wnd_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 
 	case TF_WM_SHELL_ICON: {
-		switch (lParam) {
+		switch (lparam) {
         case WM_RBUTTONDOWN:
         case WM_CONTEXTMENU: {
 			POINT mouse_pos;
 			auto res = GetCursorPos(&mouse_pos);
 			HMENU popup_menu = monitor.impl()->popup_menu_;
-            TrackPopupMenu(popup_menu, TPM_BOTTOMALIGN | TPM_LEFTALIGN, mouse_pos.x, mouse_pos.y, 0, hWnd, NULL);
+            TrackPopupMenu(popup_menu, TPM_BOTTOMALIGN | TPM_LEFTALIGN, mouse_pos.x, mouse_pos.y, 0, hwnd, NULL);
 		}
         }
 	}
 		break;
 
 	case WM_COMMAND: {
-		auto id = LOWORD(wParam);
-		auto ev = HIWORD(wParam);
+		auto id = LOWORD(wparam);
+		auto ev = HIWORD(wparam);
 
 		switch (id) {
 		case Menu::USUAL:
-			ctrl.set_mode(Mode::USUAL);
+			gCtrl.set_mode(Mode::USUAL);
 			CheckMenuItem(monitor.impl()->popup_menu_, Menu::CRANCH, MF_UNCHECKED);
 			CheckMenuItem(monitor.impl()->popup_menu_, Menu::USUAL,  MF_CHECKED);
 			break;
 
 		case Menu::CRANCH:
-			ctrl.set_mode(Mode::CRANCH);
+			gCtrl.set_mode(Mode::CRANCH);
 			CheckMenuItem(monitor.impl()->popup_menu_, Menu::USUAL,  MF_UNCHECKED);
 			CheckMenuItem(monitor.impl()->popup_menu_, Menu::CRANCH, MF_CHECKED);
+			EnableMenuItem(monitor.impl()->popup_menu_, Menu::ADD_5MIN, MF_GRAYED);
 			break;
 
 		case Menu::ADD_5MIN:
-			CheckMenuItem(monitor.impl()->popup_menu_, Menu::ADD_5MIN, MF_DISABLED);
+			EnableMenuItem(monitor.impl()->popup_menu_, Menu::ADD_5MIN, MF_GRAYED);
+			gCtrl.time2rest_ += 5 * 60000;
 			break;
 		}
 	}
@@ -199,24 +175,23 @@ LRESULT CALLBACK wnd_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 
     default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
+        return DefWindowProc(hwnd, message, wparam, lparam);
     }
 
     return 0;
 }
 
-BOOL CALLBACK monitors_proc(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMonitor, LPARAM dwData) {
-	Ctrl& ctrl = *((Ctrl*) dwData);
+BOOL CALLBACK monitors_proc(HMONITOR hmonitor, HDC hdc_monitor, LPRECT rc_monitor, LPARAM data) {
+	Ctrl& ctrl = *((Ctrl*) data);
 	if (ctrl.monitors_num >= length(ctrl.monitors))
 		return FALSE; // No more place for monitor data
 	Rect rect;
-	rect.x = lprcMonitor->left;
-	rect.y = lprcMonitor->top;
-	rect.w = lprcMonitor->right  - lprcMonitor->left;
-	rect.h = lprcMonitor->bottom - lprcMonitor->top;
+	rect.x = rc_monitor->left;
+	rect.y = rc_monitor->top;
+	rect.w = rc_monitor->right  - rc_monitor->left;
+	rect.h = rc_monitor->bottom - rc_monitor->top;
 
 	ctrl.monitors[ctrl.monitors_num].init(rect);
-	ctrl.monitors[ctrl.monitors_num].set_rect(rect);
 	++ctrl.monitors_num;
 	return TRUE;      // Continue enumeration
 }
@@ -227,27 +202,81 @@ void usual_mode_fiber(void* data, FiberW* fiber) {
 	Ctrl& ctrl = *((Ctrl*) data);
 	const wchar_t min2[] = L"2 minutes before lock";
 	const wchar_t min1[] = L"1 minute before lock";
+	const wchar_t rest[] = L"Rest";
+	wchar_t buf[256] = L"";
+
+	unsigned int work_ms = 48 * MINUTE_MS;
+	unsigned int rest_ms = 10 * MINUTE_MS;
+	unsigned int notf_ms = 1500;
+	unsigned int upd_ms  = MINUTE_MS;
+
+	//work_ms = 10 * 1000;
+	//rest_ms = 1 * 1000;
+	//upd_ms = 2000;
+
+	enum State {
+		MIN2,
+		MIN1,
+		WORK,
+	};
+
+	State state = WORK;
+
 	while (true) {
 		if (!ctrl.monitors_num)
 			continue;
-		fiber->wait_ms(48 * 60000);
 
-		{
-			NoInterrupt nointer;
-			ctrl.monitors[0].set_message(min2);
-			ctrl.monitors[0].lock();
-			fiber->wait_ms(1500);
-			ctrl.monitors[0].unlock();
+		ctrl.time2rest_ = work_ms;
+
+		while (ctrl.time2rest_) {
+			wsprintf(buf, L"%d minutes left", (ctrl.time2rest_ + 59999) / 60000);
+			wcscpy_s(ctrl.impl()->notify_.szTip, buf);
+			auto res = Shell_NotifyIcon(NIM_MODIFY, &ctrl.impl()->notify_);
+
+			if (state == MIN2) {
+				state = WORK;
+				ctrl.monitors[0].set_message(min2);
+				ctrl.monitors[0].lock();
+				fiber->wait_ms(notf_ms);
+				ctrl.time2rest_ -= notf_ms;
+				ctrl.monitors[0].unlock();
+			}
+			else if (state == MIN1) {
+				state = WORK;
+				ctrl.monitors[0].set_message(min1);
+				ctrl.monitors[0].lock();
+				fiber->wait_ms(notf_ms);
+				ctrl.time2rest_ -= notf_ms;
+				ctrl.monitors[0].unlock();
+			}
+			else {
+				state = WORK;
+				auto wait = 0;
+				if (2 * upd_ms <= ctrl.time2rest_ && ctrl.time2rest_ < 3 * upd_ms)
+				{
+					state = MIN2;
+					wait = ctrl.time2rest_ - 2 * upd_ms;
+				}
+				else if (upd_ms <= ctrl.time2rest_ && ctrl.time2rest_ < 2 * upd_ms)
+				{
+					state = MIN1;
+					wait = ctrl.time2rest_ - upd_ms;
+				}
+				else {
+					wait = std::min(ctrl.time2rest_, upd_ms);
+				}
+				ctrl.time2rest_ -= wait;
+				fiber->wait_ms(wait);
+			}
 		}
 
-		fiber->wait_ms(2 * 60000 - 3000);
-
 		{
-			NoInterrupt nointer;
-			ctrl.monitors[0].set_message(min1);
-			ctrl.monitors[0].lock();
-			fiber->wait_ms(1500);
-			ctrl.monitors[0].unlock();
+			ctrl.monitors[0].set_message(rest);
+			ctrl.lock();
+			fiber->wait_ms(rest_ms);
+			ctrl.unlock();
+
+			EnableMenuItem(ctrl.monitors[0].impl()->popup_menu_, Menu::ADD_5MIN, MF_ENABLED);
 		}
 	}
 }
@@ -275,18 +304,20 @@ void Ctrl::Impl::init() {
 		DEFAULT_CHARSET, OUT_OUTLINE_PRECIS,
 		CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, VARIABLE_PITCH, TEXT("Corbel"));
 
-	EnumDisplayMonitors(NULL, NULL, monitors_proc, (LPARAM) &ctrl);
+	EnumDisplayMonitors(NULL, NULL, monitors_proc, (LPARAM) &gCtrl);
 
-	if (ctrl.monitors_num < 1) { /* error */ }
+	if (gCtrl.monitors_num < 1) { /* error */ }
 
 	// Notify icon
-	RtlSecureZeroMemory(&notify_, sizeof notify_);
+	ZeroMemory(&notify_, sizeof notify_);
 	notify_.cbSize = sizeof notify_;
 
 	notify_.hIcon  = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_ICON1)); 
-	notify_.hWnd   = ctrl.monitors[0].impl()->wnd_; 
+	notify_.hWnd   = gCtrl.monitors[0].impl()->wnd_; 
 	notify_.uID    = WM_USER; 
-	notify_.uFlags = NIF_ICON | NIF_MESSAGE;
+	notify_.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
+
+	wcscpy_s(notify_.szTip, TEXT(""));
 
 	notify_.uCallbackMessage = TF_WM_SHELL_ICON;
 	auto res = Shell_NotifyIcon(NIM_ADD, &notify_); 
@@ -294,7 +325,7 @@ void Ctrl::Impl::init() {
 	// Menu
 	MENUITEMINFO menu_item;
 	HMENU popup_menu = CreatePopupMenu();
-	RtlSecureZeroMemory(&menu_item, sizeof MENUITEMINFO);
+	ZeroMemory(&menu_item, sizeof MENUITEMINFO);
 	menu_item.cbSize = sizeof MENUITEMINFO;
 	menu_item.fType  = MFT_RADIOCHECK;
 	menu_item.fState = MF_CHECKED;
@@ -316,19 +347,19 @@ void Ctrl::Impl::init() {
 	menu_item.dwTypeData = L"&Add 5 min";
 	res = InsertMenuItem(popup_menu, 2, TRUE, &menu_item);
 
-	ctrl.monitors[0].impl()->popup_menu_ = popup_menu;
+	gCtrl.monitors[0].impl()->popup_menu_ = popup_menu;
 
 	ConvertThreadToFiber(GetCurrentThread());
 
-	auto fib = new FiberW(ctrl.monitors[0].impl()->wnd_, usual_mode_fiber, &ctrl);
-	fib->resume();
+	fiber_.reset(new FiberW(gCtrl.monitors[0].impl()->wnd_, usual_mode_fiber, &gCtrl));
 }
 
 void Ctrl::Impl::destroy() {
-	auto res = Shell_NotifyIcon(NIM_DELETE, &notify_); 
+	auto res = Shell_NotifyIcon(NIM_DELETE, &notify_);
 }
 
 int Ctrl::Impl::run() {
+	fiber_->resume();
 	MSG msg;
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
@@ -341,9 +372,7 @@ void Ctrl::Impl::set_input_lock(bool lock) {
 	BlockInput(lock? TRUE : FALSE);
 	auto err = GetLastError();
 	if (err) {
-		//TRA
 		//if (err == ERROR_ACCESS_DENIED) 
 		//	MessageBox(NULL, L"Access denied", L"Access", 0);
 	}
 }
-
