@@ -131,6 +131,7 @@ LRESULT CALLBACK wnd_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
 		case WM_CONTEXTMENU: {
 			POINT mouse_pos;
 			auto res = GetCursorPos(&mouse_pos);
+			SetForegroundWindow(hwnd);
 			HMENU popup_menu = monitor.impl()->popup_menu_;
 			TrackPopupMenu(popup_menu, TPM_BOTTOMALIGN | TPM_LEFTALIGN, mouse_pos.x, mouse_pos.y, 0, hwnd, NULL);
 		}
@@ -147,6 +148,7 @@ LRESULT CALLBACK wnd_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
 			gCtrl.set_mode(Mode::USUAL);
 			CheckMenuItem(monitor.impl()->popup_menu_, Menu::CRANCH, MF_UNCHECKED);
 			CheckMenuItem(monitor.impl()->popup_menu_, Menu::USUAL,  MF_CHECKED);
+			
 			break;
 
 		case Menu::CRANCH:
@@ -159,7 +161,6 @@ LRESULT CALLBACK wnd_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
 		case Menu::ADD_5MIN: {
 			EnableMenuItem(monitor.impl()->popup_menu_, Menu::ADD_5MIN, MF_GRAYED);
 			gCtrl.rest_timer_add(5 * MINUTE_MS);
-			
 			break;
 		}
 		}
@@ -195,12 +196,11 @@ void usual_mode_fiber(void* data, FiberW* fiber) {
 	const wchar_t min2[] = L"2 minutes before lock";
 	const wchar_t min1[] = L"1 minute before lock";
 	const wchar_t rest[] = L"Rest";
-	wchar_t buf[256] = L"";
 
-	unsigned int work_ms = 50 * MINUTE_MS;
-	unsigned int rest_ms = 10 * MINUTE_MS;
-	unsigned int notf_ms = 1500;
-	unsigned int upd_ms  = MINUTE_MS;
+	unsigned int work_ms = ctrl.conf.work_ms;
+	unsigned int rest_ms = ctrl.conf.rest_ms;
+	unsigned int notf_ms = ctrl.conf.notf_ms;
+	unsigned int upd_ms  = ctrl.conf.upd_ms;
 
 	enum State {
 		MIN2,

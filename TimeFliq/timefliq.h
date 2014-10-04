@@ -1,7 +1,6 @@
 /* TimeFliq */
 #pragma once
 
-#include <atomic>
 static wchar_t app_title[] = L"TimeFliq";
 
 const static unsigned int MINUTE_MS = 60000;
@@ -39,12 +38,21 @@ enum class Mode {
 	CRANCH
 };
 
+struct Config {
+	unsigned int work_ms = 50 * MINUTE_MS;
+	unsigned int rest_ms = 10 * MINUTE_MS;
+	unsigned int notf_ms = 1500;
+	unsigned int upd_ms  = MINUTE_MS;
+};
+
 class Ctrl {
 public:
 	Monitor monitors[4];
 	size_t monitors_num = 0;
 
-	void init();
+	Config conf;
+
+	void init(const char* cmd);
 	void destroy();
 
 	int run();
@@ -53,6 +61,7 @@ public:
 	void unlock();
 
 	void set_mode(Mode mode);
+	Mode mode() const { return mode_; }
 
 	class Impl;
 
@@ -65,6 +74,8 @@ public:
 
 private:
 	Impl* impl_ = nullptr;
+
+	Mode mode_;
 
 	unsigned int rest_timer_;
 };

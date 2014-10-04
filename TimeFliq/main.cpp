@@ -9,7 +9,7 @@ int CALLBACK WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd, int show) {
 #else
 #	error "Win32 only!"
 #endif
-	gCtrl.init();
+	gCtrl.init(cmd);
 	int result = gCtrl.run();
 	gCtrl.destroy();
 	return result;
