@@ -41,8 +41,8 @@ enum class Mode {
 struct Config {
 	unsigned int work_ms = 50 * MINUTE_MS;
 	unsigned int rest_ms = 10 * MINUTE_MS;
-	unsigned int notf_ms = 1500;
 	unsigned int upd_ms  = MINUTE_MS;
+	unsigned int notf_ms = 1500;	
 };
 
 class Ctrl {

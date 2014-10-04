@@ -286,6 +286,12 @@ void Ctrl::Impl::init() {
 		DEFAULT_CHARSET, OUT_OUTLINE_PRECIS,
 		CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, VARIABLE_PITCH, TEXT("Corbel"));
 
+	if (!font) {
+		font = CreateFont(48, 0, 0, 0, FW_DONTCARE, FALSE, FALSE, FALSE, 
+			DEFAULT_CHARSET, OUT_OUTLINE_PRECIS,
+			CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, VARIABLE_PITCH, TEXT("Arial"));
+	}
+
 	EnumDisplayMonitors(NULL, NULL, monitors_proc, (LPARAM) &gCtrl);
 
 	if (gCtrl.monitors_num < 1) { /* error */ }
